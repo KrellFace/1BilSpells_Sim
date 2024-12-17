@@ -1,5 +1,6 @@
 import abc
 import math
+import random
 from abc import ABC, abstractmethod
 from enum import Enum
 
@@ -98,26 +99,44 @@ class EnergyNode(SpellNode):
     
     #def __init__(self, nodeType: NodeType):
     #    self._nodeType = nodeType
-    def __init__(self, nodeName: str, node_energy: float, power_rate: float):
+    def __init__(self, nodeName: str, node_power: float, ticks_per_second: float, is_autofire: bool, input_power_mod: float = None, hit_to_trigger_rate = None):
         super().__init__(nodeName, enum_NodeType.ENERGY, 0, 1) #All Energy nodes have 0 inputs and 1 output
-        self._node_energy = node_energy
-        self._power_rate = power_rate
+        self._node_power = node_power
+        self._ticks_per_second = ticks_per_second
+        self._is_autoFire = is_autofire
+        self._input_power_mod = input_power_mod
+        self._hit_to_trigger_rate = hit_to_trigger_rate
         self.setup_EnergyNode()
     
 
     #Overloading transmit energy to always use the nodes energy value
-    def transmit_energy(self):
+    def transmit_energy(self, power_input = None):
         #print("Transmitting energy in node " + self._nodeName)
         packet_list = []
         for child in self._child_nodes:
-            packet_list.extend(child.transmit_energy(self._node_energy))
+            if(power_input == None and self._is_autoFire == False):
+                print("Triggered energy node triggered with no power input")
+            elif(self._is_autoFire == True):
+                packet_list.extend(child.transmit_energy(self._node_power))
+            else:
+                print("Transmiting energy in triggered node: " + str(power_input*self._input_power_mod))
+                packet_list.extend(child.transmit_energy(power_input*self._input_power_mod))
         return packet_list
 
-    def node_energy(self) -> float:
-        return self._node_energy
+    def node_power(self) -> float:
+        return self._node_power
     
-    def power_rate(self) -> float:
-        return self._power_rate
+    def ticks_per_second(self) -> float:
+        return self._ticks_per_second
+    
+    def is_autofire(self) -> bool:
+        return self._is_autoFire
+    
+    def input_power_mod(self) -> float:
+        return self._input_power_mod
+    
+    def hit_to_trigger_rate(self) -> float:
+        return self._hit_to_trigger_rate
     
     
     @abstractmethod
@@ -125,7 +144,12 @@ class EnergyNode(SpellNode):
         pass
 
     def print_self_details(self):
-        print(self._nodeName + " is an Energy node whcih produces ping of strength " + str(self._node_energy) + " every " + str(self._power_rate) + " seconds for " + str(self._max_child_nodes) + " output nodes")
+        if(self._is_autoFire):
+
+            print(self._nodeName + " is an autofiring Energy node whcih produces ping of strength " + str(self._node_power) + " every " + str(self._ticks_per_second) + " seconds for " + str(self._max_child_nodes) + " output nodes")
+        else:
+            print(self._nodeName + " is an triggered Energy node with an power mod of " + str(self._input_power_mod) + " with " + str(self._max_child_nodes) + " output nodes")
+
 
 class ModNode(SpellNode):
     def __init__(self, nodeName: str, max_parent_nodes: int, max_child_nodes: int, power_mod: float):
@@ -218,16 +242,43 @@ class Spell():
         return self._energy_nodes
     
     def simulate_time_period(self, period: float, max_targets: int):
-        packet_list = []
+        autofire_packet_list = []
+
+        #WE NEED THIS TO ONLY FIRE ON AUTO FIRING ENERGY NODES
+
         for node in self._energy_nodes:
-            castcount = math.floor(period / node.power_rate())
-            #node.transmit_energy()
+            
+            if (node.is_autofire()==True):
+                node.print_self_details()
+                castcount = math.floor(period / node.ticks_per_second())
+                #node.transmit_energy()
 
-            #THIS DOES NOT WORK - ITS PINGING EVERY ENERGY NODE AT THE RATE OF THE FASTEST ONE
-            #MAYBE WE CAN JUST DO THEM INDIVIDUALY 
+                #THIS DOES NOT WORK - ITS PINGING EVERY ENERGY NODE AT THE RATE OF THE FASTEST ONE
+                #MAYBE WE CAN JUST DO THEM INDIVIDUALY 
+                #WE ARE DOING THEN INDIVIDUALLY YOU ADORABLE DOLT <3
 
-            for i in range(castcount):
-                packet_list.extend(node.transmit_energy())
+                for i in range(castcount):
+                    autofire_packet_list.extend(node.transmit_energy())
+        
+        all_hit_event_sets = []
+
+        triggeredfire_packet_list = []
+
+        for packet in autofire_packet_list:
+            all_hit_event_sets.extend([[min(packet.max_targets, max_targets), packet.directDamage]]) 
+            #print("Generating hit event set with : " + str(min(packet.max_targets, max_targets)) + " targets and " + str(packet.directDamage) + " damage")
+        
+        for node in self._energy_nodes:
+            if(not node.is_autofire()):
+                node.print_self_details()
+                for hit_event_set in all_hit_event_sets:
+                    #print(hit_event_set)
+                    if(random.uniform(0, 1)<node.hit_to_trigger_rate()):
+                        #castcount = math.floor(hit_event_set[0] * node.hit_to_trigger_rate())
+
+                        for i in range(hit_event_set[0]):
+                            triggeredfire_packet_list.extend(node.transmit_energy(hit_event_set[1]))
+
 
         totDirDmg = 0
         tot3targDmg = 0
@@ -235,11 +286,26 @@ class Spell():
         tot10targDmg = 0
         #print("Packet list: ")
         #print(packet_list)
-        for packet in packet_list:
+
+        #ITS IN THIS LOOP THAT WE SHOULD CALCULATE TRIGGERED EVENTS, BASED ON TARGETS HIT MODULATED BY A HEURISTIC
+        #I.E VANILLA ON HIT EVENTS - TRIGGER FOR ALL HITS - HIT HEALTHY, ONLY 50% OF HITS ETC ETC
+        #ADD ALL EVENTS TO A SEPERATE DICT OR SIMILAR STRUCTURE, THEN WE TRIGGER ALL EVENT BASED NODES
+        #THEN REPEAT THAT PROCESS UNTIL NO NEW EVENTS 
+
+        for packet in autofire_packet_list:
             totDirDmg+=packet.directDamage
             tot3targDmg+=(packet.directDamage * min(packet.max_targets, 3))
             tot5targDmg+=(packet.directDamage * min(packet.max_targets, 5))
             tot10targDmg+=(packet.directDamage * min(packet.max_targets, 10))
+
+        
+
+        for packet in triggeredfire_packet_list:
+            totDirDmg+=packet.directDamage
+            tot3targDmg+=(packet.directDamage * min(packet.max_targets, 3))
+            tot5targDmg+=(packet.directDamage * min(packet.max_targets, 5))
+            tot10targDmg+=(packet.directDamage * min(packet.max_targets, 10))
+
 
         print("Tot Dir Dmg: " + str(totDirDmg) + ". Tot 3 targ: " + str(tot3targDmg)+ ". Tot 5 targ: " + str(tot5targDmg)+ ". Tot 10 targ: " + str(tot10targDmg))
 
@@ -284,11 +350,19 @@ def get_max_targets_for_aoe_radius(radius: float):
 #ACTUAL NODES# ----------------------------------------------------------------------------
 
 
-#CAST NODES
+#ENERGY NODES
 
 class BasicCastNode(EnergyNode):
     def __init__(self, nodeName : str):
-        super().__init__(nodeName, CAST_POWER, CAST_RATE)
+        super().__init__(nodeName, CAST_POWER, CAST_RATE, True)
+
+    def setup_EnergyNode(self):
+        #print("Cast node setting up")
+        pass
+
+class OnHitNode(EnergyNode):
+    def __init__(self, nodeName: str):
+        super().__init__(nodeName, None, None, False, input_power_mod=0.2, hit_to_trigger_rate=0.2)
 
     def setup_EnergyNode(self):
         #print("Cast node setting up")
@@ -304,15 +378,16 @@ class Mod50Node(ModNode):
 
 class FireballNode(DamageNode):
     def __init__(self, nodeName : str):
-        super().__init__(nodeName, 0, 1, 0)
+        super().__init__(nodeName, 0, 1, 1)
     
     def generate_info_packet(self, energy: float): 
         #print("Fireball node creating a spell packet:")
+        #print("Creating spell packet with damage: " + str(self._power_mod) + " x " + str(energy))
         return SpellInfoPacket(self._power_mod*energy, get_max_targets_for_aoe_radius(self._aoe_radius))
 
 class ChainingFireballNode(DamageNode):
     def __init__(self, nodeName : str):
-        super().__init__(nodeName, 1, 1, 0)
+        super().__init__(nodeName, 1, 1, 1)
     
     def generate_info_packet(self, energy: float): 
         #print("Fireball node creating a spell packet:")
@@ -354,8 +429,11 @@ BasicCastNode2 = BasicCastNode("Cast Node V2")
 aoeNode1 = AOENode("AOE Node 1")
 mod50Node = Mod50Node("Mod 50 node")
 basicFireball = FireballNode("Fireball1")
+basicFireball2 = FireballNode("Fireball2")
 expNode = ExplosionNode("Small one")
 bigExpNode = BigExplosionNode("BigOne")
+
+onHitNode = OnHitNode("OnHitTest")
 
 
 #aoeSpell = Spell("AOE Spell", [BasicCastNode1])
@@ -365,8 +443,12 @@ BasicCastNode1.child_nodes=[basicFireball]
 unmodSpell = Spell("Basic fireball", [BasicCastNode1])
 unmodSpell.simulate_time_period(5, 1)
 
-mod50Node.child_nodes=[bigExpNode]
-BasicCastNode2.child_nodes=[mod50Node]
-modSpell = Spell("Explosion",[BasicCastNode2])
-modSpell.simulate_time_period(5, 1)
+#mod50Node.child_nodes=[bigExpNode]
+#BasicCastNode2.child_nodes=[mod50Node]
+#modSpell = Spell("Explosion",[BasicCastNode2])
+#modSpell.simulate_time_period(5, 1)
+
+onHitNode.child_nodes=[basicFireball2]
+onHitSpell = Spell("On hit only", [BasicCastNode1,onHitNode])
+onHitSpell.simulate_time_period(5, 1)
 
