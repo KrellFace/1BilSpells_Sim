@@ -7,6 +7,7 @@ from enum import Enum
 
 #GENERAL PARAMETERS
 AREA_TO_TARGET_FACTOR = 0.05
+MIN_DAMAGE_THRESHOLD = 0.
 
 #NODE PARAMETERS
 CAST_RATE = 0.2
@@ -18,6 +19,12 @@ class enum_NodeType(Enum):
     MOD = 2,
     DMG = 3,
     STATIC = 4
+
+class enum_ElementalType(Enum):
+    FIRE = 1,
+    WATER = 2,
+    EARTH = 3,
+    AIR = 4
 
 
 class SpellNode(ABC):
@@ -119,7 +126,7 @@ class EnergyNode(SpellNode):
             elif(self._is_autoFire == True):
                 packet_list.extend(child.transmit_energy(self._node_power))
             else:
-                print("Transmiting energy in triggered node: " + str(power_input*self._input_power_mod))
+                #print("Transmiting energy in triggered node: " + str(power_input*self._input_power_mod))
                 packet_list.extend(child.transmit_energy(power_input*self._input_power_mod))
         return packet_list
 
@@ -146,7 +153,7 @@ class EnergyNode(SpellNode):
     def print_self_details(self):
         if(self._is_autoFire):
 
-            print(self._nodeName + " is an autofiring Energy node whcih produces ping of strength " + str(self._node_power) + " every " + str(self._ticks_per_second) + " seconds for " + str(self._max_child_nodes) + " output nodes")
+            print(self._nodeName + " is an autofiring Energy node which produces ping of strength " + str(self._node_power) + " every " + str(self._ticks_per_second) + " seconds for " + str(self._max_child_nodes) + " output nodes")
         else:
             print(self._nodeName + " is an triggered Energy node with an power mod of " + str(self._input_power_mod) + " with " + str(self._max_child_nodes) + " output nodes")
 
@@ -162,6 +169,9 @@ class ModNode(SpellNode):
     def transmit_energy(self, energy: float):
         #print("Transmitting energy in node " + self._nodeName)
         packet_list = []
+
+        #TO DO - HANDLING FOR SPLITTING THE POWER BETWEEN OUTPUTS 
+
         for child in self._child_nodes:
             packet_list.extend(child.transmit_energy(energy*self._power_mod))
         #print("Dealing " + str(energy) + " damage to  " + str(self._aoe_radius) + " max target")
@@ -184,7 +194,11 @@ class DamageNode(SpellNode):
     def transmit_energy(self, energy: float):
         #print("Transmitting energy in node " + self._nodeName)
         packet_list = []
-        packet_list.append(self.generate_info_packet(energy))
+        self_packet = self.generate_info_packet(energy)
+        if(self_packet.directDamage>MIN_DAMAGE_THRESHOLD):
+            packet_list.append(self_packet)
+        
+        #packet_list.append(self.generate_info_packet(energy))
         for child in self._child_nodes:
             packet_list.extend(child.transmit_energy(energy))
         #print("Dealing " + str(energy) + " damage to  " + str(self._aoe_radius) + " max target")
@@ -325,6 +339,36 @@ class SpellInfoPacket():
     def max_targets(self) -> float:
         return self._max_targets
     
+class EnergyPulse():
+    def __init__(self, power: float):
+        self._power = power
+        self._fireTendency = 1.0
+        self._waterTendency = 1.0
+        self._airTendency = 1.0
+        self._earthTendency = 1.0
+
+    def changePower(self, mod):
+        self._power = self._power * mod
+
+    def changeTendency(self, mod, type):
+        
+        self._fireTendency -= (mod/3)
+        self._waterTendency -= (mod/3)
+        self._airTendency -= (mod/3)
+        self._earthTendency -= (mod/3)
+        if(type == enum_ElementalType.FIRE):
+            self._fireTendency += (mod+(mod/3))
+        elif(type == enum_ElementalType.WATER):
+            self._waterTendency += (mod+(mod/3))
+        elif(type == enum_ElementalType.AIR):
+            self._airTendency += (mod+(mod/3))
+        elif(type == enum_ElementalType.EARTH):
+            self._earthTendency += (mod+(mod/3))
+    
+    def printDetails(self):
+        print("Energy pulse with power: " + str(self._power) + " and elemental tendency: " + str(self._fireTendency) + ", "  + str(self._waterTendency)  + ", "  + str(self._airTendency)   + ", "  + str(self._earthTendency))
+
+    
 
 
 
@@ -338,6 +382,8 @@ def is_list_of_class(input_data, cls):
 def get_max_targets_for_aoe_radius(radius: float):
     area = math.pi * radius**2
     return max(math.floor(area*AREA_TO_TARGET_FACTOR),1)
+
+#def mod_elemental_tendency(mod, arrayInt, input_vals):
 
 
 
@@ -362,7 +408,7 @@ class BasicCastNode(EnergyNode):
 
 class OnHitNode(EnergyNode):
     def __init__(self, nodeName: str):
-        super().__init__(nodeName, None, None, False, input_power_mod=0.2, hit_to_trigger_rate=0.2)
+        super().__init__(nodeName, None, None, False, input_power_mod=0.2, hit_to_trigger_rate=.2)
 
     def setup_EnergyNode(self):
         #print("Cast node setting up")
@@ -452,3 +498,15 @@ onHitNode.child_nodes=[basicFireball2]
 onHitSpell = Spell("On hit only", [BasicCastNode1,onHitNode])
 onHitSpell.simulate_time_period(5, 1)
 
+
+testPulse = EnergyPulse(3)
+
+testPulse.printDetails()
+
+testPulse.changePower(1.5)
+
+testPulse.printDetails()
+
+testPulse.changeTendency(.4, enum_ElementalType.FIRE )
+
+testPulse.printDetails()
