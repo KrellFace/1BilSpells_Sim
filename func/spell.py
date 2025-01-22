@@ -1,14 +1,14 @@
 
 import random
-from .helperFunc import *
-from .nodeSuperTypes import *
+from func.helperFunc import *
+from func.nodeSuperTypes import *
 
 class Spell():
     def __init__(self, spell_name: str, energy_nodes):
         self._spell_name = spell_name
         if is_list_of_class(energy_nodes, EnergyNode):
             self._energy_nodes = energy_nodes
-
+        #self._energy_nodes = energy_nodes
     @property
     def spell_name(self) -> str:
         return self._spell_name
@@ -17,7 +17,8 @@ class Spell():
     def energy_nodes(self):
         return self._energy_nodes
     
-    def simulate_time_period(self, period: float, max_targets: int):
+    #def simulate_time_period(self, period: float, max_targets: int):
+    def simulate_time_period(self, period: float):
         autofire_packet_list = []
 
         
@@ -26,7 +27,7 @@ class Spell():
             
             if (node.is_autofire()==True):
                 #node.print_self_details()
-                castcount = math.floor(period / node.ticks_per_second())
+                castcount = math.floor(period * node.ticks_per_second())
                 #node.transmit_energy()
 
                 #THIS DOES NOT WORK - ITS PINGING EVERY ENERGY NODE AT THE RATE OF THE FASTEST ONE
@@ -41,7 +42,10 @@ class Spell():
         triggeredfire_packet_list = []
 
         for packet in autofire_packet_list:
-            all_hit_event_sets.extend([[min(packet.max_targets, max_targets), packet.directDamage]]) 
+            #all_hit_event_sets.extend([[min(packet.max_targets, max_targets), packet.directDamage]]) 
+            all_hit_event_sets.extend([[packet.max_targets, packet.directDamage]]) 
+
+
             #print("Generating hit event set with : " + str(min(packet.max_targets, max_targets)) + " targets and " + str(packet.directDamage) + " damage")
         
 
@@ -88,9 +92,9 @@ class Spell():
             tot10targDmg+=(packet.directDamage * min(packet.max_targets, 10))
 
 
-        #print("Tot Dir Dmg: " + str(totDirDmg) + ". Tot 3 targ: " + str(tot3targDmg)+ ". Tot 5 targ: " + str(tot5targDmg)+ ". Tot 10 targ: " + str(tot10targDmg))
+        print("Tot Dir Dmg: " + str(totDirDmg) + ". Tot 3 targ: " + str(tot3targDmg)+ ". Tot 5 targ: " + str(tot5targDmg)+ ". Tot 10 targ: " + str(tot10targDmg))
 
-        return SpellSimData(period, max_targets, totDirDmg)
+        return SpellSimData(self._spell_name, period, totDirDmg, tot3targDmg, tot5targDmg, tot10targDmg)
 
     def get_spell_xml(self):
 

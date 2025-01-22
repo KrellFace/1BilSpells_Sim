@@ -1,7 +1,7 @@
 import math
 import random
-from .nodeSuperTypes import *
-from .packetTypes import *
+#from func.nodeSuperTypes import *
+from func.configAndEnums import *
 
 def is_list_of_class(input_data, cls):
     if isinstance(input_data, list):
@@ -12,8 +12,8 @@ def get_max_targets_for_aoe_radius(radius: float):
     area = math.pi * radius**2
     return max(math.floor(area*AREA_TO_TARGET_FACTOR),1)
 
-def get_damage_from_energypacket(energy_packet: EnergyPacket, power_mod: float):
-    return power_mod*energy_packet.getPower()*energy_packet.getSpecificElementalTendency(enum_ElementalType.FIRE)
+#def get_damage_from_energypacket(energy_packet: EnergyPacket, power_mod: float):
+#    return power_mod*energy_packet.getPower()*energy_packet.getSpecificElementalTendency(enum_ElementalType.FIRE)
 
 
 def get_node_with_free_slot(nodes_to_check, looking_for_parent_slot):
@@ -55,3 +55,6 @@ def copy_node_list(toCopy):
     for node in toCopy:
         out.append(node.copy_node())
     return out
+
+def lerp(a, b, t):
+    return a + (b - a) * t

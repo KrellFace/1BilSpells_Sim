@@ -1,19 +1,25 @@
+import os
+import sys
 from func import *
 from nodeTypes import *
     
 # TESTING
 
+print(f"getcwd:{os.getcwd()}")
+print(f"sys.path:{sys.path}")
 
 basicCastNode1 = BasicCastNode("Cast Node V1")
 basicCastNode2 = BasicCastNode("Cast Node V2")
 basicCastNode3 = BasicCastNode("Cast Node V3")
-aoeNode1 = AOENode("AOE Node 1")
-mod50Node = Mod50Node("Mod 50 node")
-basicFireball = FireballNode("Fireball1")
-basicFireball2 = FireballNode("Fireball2")
-basicChainFB = ChainingFireballNode("CFB")
+wand1 = WandCast("Wand")
+dash1 = OnDashEnd("Dash1")
+light1 = Lightning("L1")
+exp1 = ExplosionNode("Exp1")
+aoeNode1 = AreaNode("AOE Node 1")
+basicFireball = ProjectileNode("Fireball1")
+basicFireball2 = ProjectileNode("Fireball2")
+basicChainFB = ProjectileWithOutput("CFB")
 expNode = ExplosionNode("Small one")
-bigExpNode = BigExplosionNode("BigOne")
 noDmg = NoDamageNode("NDM")
 tenChildren = TenChildren("TC")
 tenParents = TenParents("TP")
@@ -23,130 +29,85 @@ onHitNode = OnHitNode("OnHitTest")
 strongFireNode1 = StrongFireNode("StrFire1")
 strongWaterNode = StrongWaterNode("StrWtr1")
 
+crystalNode = CrystalNode("c1")
+
 
 
 #aoeSpell = Spell("AOE Spell", [basicCastNode1])
 #aoeSpell.simulate_time_period(5)
 
 #BASIC FIREBALL
-basicCastNode1.child_nodes.append(basicFireball)
-basicFireball.parent_nodes.append(basicCastNode1)
-unmodSpell = Spell("Basic fireball", [basicCastNode1])
-unmodSpell.simulate_time_period(5, 1)
+#basicCastNode1.child_nodes.append(basicFireball)
+link_nodes(wand1, basicFireball)
+#basicFireball.parent_nodes.append(basicCastNode1)
+unmodSpell = Spell("Basic fireball", [wand1])
+#unmodSpell.simulate_time_period(5)
 
-node = get_node_with_free_slot([basicCastNode1, basicFireball], True)
-if node != None:
-    print(node.nodeName)
-else:
-    print("No slot found")
+#node = get_node_with_free_slot([basicCastNode1, basicFireball], True)
+#if node != None:
+#    print(node.nodeName)
+#else:
+#    print("No slot found")
 
-#BASIC FIREBALL WITH DO NOTHING MOD
-#tenChildren.child_nodes = [basicFireball]
-#basicCastNode2.child_nodes = [tenChildren]
-#modNowtSpell = Spell("Basic fireball Blank Mod", [basicCastNode2])
-#modNowtSpell.simulate_time_period(5, 1)
+#BASIC CRYSTAL
 
-#BASIC FIREBALL SPLIT
-tenChildren.child_nodes.append([basicFireball, noDmg])
-basicFireball.parent_nodes.append(tenChildren)
-noDmg.parent_nodes.append(tenChildren)
-basicCastNode2.child_nodes.append(tenChildren)
-tenChildren.parent_nodes.append(basicCastNode2)
-#splitNowt = Spell("Basic fireball split", [basicCastNode2])
-#splitNowt.simulate_time_period(5, 1)
+clean_pool([basicFireball, wand1])
+link_nodes(crystalNode, basicFireball)
+link_nodes(wand1, crystalNode)
 
-#print(splitNowt.get_spell_xml())
+crystalSpell = Spell("Crystal spell", [wand1])
+#crystalSpell.simulate_time_period(5)
 
-node = get_node_with_free_slot([basicFireball, noDmg, tenChildren,basicCastNode2 ], False)
-if node != None:
-    print(node.nodeName)
-else:
-    print("No slot found")
+#DASH CRYSTAL
+
+clean_pool([basicFireball, crystalNode])
+link_nodes(crystalNode, basicFireball)
+link_nodes(dash1, crystalNode)
+
+crystalSpell2 = Spell("Crystal spell Dash", [dash1])
+#crystalSpell2.simulate_time_period(5)
 
 
-#BASIC AOE
-#basicChainFB.child_nodes=[aoeNode1]
-#basicCastNode1.child_nodes=[basicChainFB]
-#aoeSpell = Spell("Basic AOE", [basicCastNode1])
-#unmodSpell.simulate_time_period(5, 1)
+#Cast into explosion:
+clean_pool([wand1, basicFireball])
 
-#AOE WITH STRONG WATER
+#Lightning into explosion
+#
+link_nodes(light1, exp1)
+#link_nodes(light1, basicFireball)
+lightexplode = Spell("Light Explode", [light1])
+#lightexplode.simulate_time_period(5)
 
-#strongWaterNode.child_nodes = [aoeNode1]
-#basicChainFB.child_nodes=[strongWaterNode]
-#basicCastNode1.child_nodes=[basicChainFB]
-#aoeSpell = Spell("Basic AOE", [basicCastNode1])
-#unmodSpell.simulate_time_period(5, 1)
+#Lightning into AOE
+clean_pool([light1, wand1])
+link_nodes(wand1,aoeNode1)
+lightaoe = Spell("LAOE", [wand1])
+lightaoe.simulate_time_period(5)
 
-#print(unmodSpell.get_spell_xml())
+#TESTING CSV GENERATION
 
-#COMBO SPELL
+#current_directory = os.path.dirname(os.path.abspath(__file__))
+# Define the file path for the CSV
+#csv_file_path = os.path.join(current_directory, "output", "example.csv")
 
-#comboSpell = Spell("Combo", [basicCastNode1, basicCastNode2])
-#print(comboSpell.get_spell_xml())
-
-#POWERFUL EXPLOSION
-#mod50Node.child_nodes=[bigExpNode]
-#basicCastNode2.child_nodes=[mod50Node]
-#modSpell = Spell("Explosion",[basicCastNode2])
-#modSpell.simulate_time_period(5, 1)
-
-#FIREBALL THAT TRIGGERS OTHER FIREBALLS ON HIT
-#onHitNode.child_nodes=[basicFireball2]
-#onHitSpell = Spell("On hit only", [basicCastNode1,onHitNode])
-#onHitSpell.simulate_time_period(5, 1)
+#os.makedirs(os.path.dirname(csv_file_path), exist_ok=True)
 
 
-#BASIC FIREBALL WITH STRONG FIRE NODE
-#strongFireNode1.child_nodes=[basicFireball]
-#basicCastNode2.child_nodes=[strongFireNode1]
-#unmodSpell = Spell("Basic fireball", [basicCastNode2])
-#unmodSpell.simulate_time_period(5, 1)
-
-#BASIC FIREBALL WITH STRONG WATER NODE
-#strongWaterNode.child_nodes=[basicFireball]
-#basicCastNode2.child_nodes=[strongWaterNode]
-#unmodSpell = Spell("Basic fireball", [basicCastNode2])
-#unmodSpell.simulate_time_period(5, 1)
+#gen_csv_from_spellsdata([genSpellProperties(genSpell, 5), genSpellProperties(bestSpell, 5)], csv_file_path)
 
 
-#BASIC FIREBALL WITH 2 CAST INPUTS
-#tenParents.child_nodes = [basicFireball]
-#basicCastNode1.child_nodes=[tenParents]
-#basicCastNode2.child_nodes=[tenParents]
-#twocastball = Spell("Basic fireball", [basicCastNode1, basicCastNode2])
-#twocastball.simulate_time_period(5, 1)
+#TESTING FULL RUN POTENTIAL
+#current_directory = os.path.dirname(os.path.abspath(__file__))
+# Define the file path for the CSV
+#csv_file_path = os.path.join(current_directory, "output", "test_run.csv")
 
-#BASIC FIREBALL WITH 3 CAST INPUTS
-#tenParents.child_nodes = [basicFireball]
-#basicCastNode1.child_nodes=[tenParents]
-#basicCastNode2.child_nodes=[tenParents]
-#basicCastNode3.child_nodes=[tenParents]
-#threccastball = Spell("Basic fireball", [basicCastNode1, basicCastNode2, basicCastNode3])
-#threccastball.simulate_time_period(5, 1)
-#print(threccastball.get_spell_parentheses_not())
+#os.makedirs(os.path.dirname(csv_file_path), exist_ok=True)
+
+#full_spell_generation_run(csv_file_path, 100, enum_SpellQualityHeuristic.DPS, 10, 14)
 
 
-#TESTING SPELL GENERATION
 
-pool = generate_node_pool()
-
-selected_pool = select_x_nodes_from_pool(pool, 12)
-for node in selected_pool:
-    #print(node.nodeName)
-    None
-
-genSpell = generate_random_spell(copy_node_list(selected_pool), "Generated Spell")[0]
-print(genSpell.get_spell_parentheses_not())
-genSpell.simulate_time_period(5, 1)
-
-
-print(f"Len of pool: { len(selected_pool)}")
-
-bestSpell = gen_best_spell(copy_node_list(selected_pool), "Test Spell", 20, enum_SpellQualityHeuristic.DPS)
-print(bestSpell.get_spell_parentheses_not())
-bestSpell.simulate_time_period(5, 1)
-
+#TESTING ELEMENTAL TUNING
 
 #testPulse = pt.EnergyPacket(3)
 #testPulse.printDetails()

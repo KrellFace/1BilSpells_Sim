@@ -1,4 +1,6 @@
-from  .configAndEnums import *
+import math
+from .configAndEnums import *
+#from .spell import Spell
 
 class EnergyPacket():
     def __init__(self, power: float, elemental_tendency = None):
@@ -52,7 +54,7 @@ class EnergyPacket():
     def printDetails(self):
         print("Energy pulse with power: " + str(self._power) + " and elemental tendency: " + str(self._fireTendency) + ", "  + str(self._waterTendency)  + ", "  + str(self._airTendency)   + ", "  + str(self._earthTendency))
 
-class SpellInfoPacket():
+class SpellEffectPacket():
     def __init__(self, directDamage: float, max_targets: int):
         self._directDamage = directDamage
         self._max_targets = max_targets
@@ -67,19 +69,77 @@ class SpellInfoPacket():
         return self._max_targets
 
 class SpellSimData():
-    def __init__(self, timePeriod, maxTargets, oneTargDamage ):
+    def __init__(self, spell_name, timePeriod, oneTargDamage, threeTargDamage, fiveTargDamage, tenTargDamage ):
+        self._spellName = spell_name
         self._timePeriod = timePeriod
-        self._maxTargets = maxTargets
         self._oneTargDamage = oneTargDamage    
+        self._threeTargDamage = threeTargDamage    
+        self._fiveTargDamage = fiveTargDamage    
+        self._tenTargDamage = tenTargDamage    
         
+    @property
+    def spell_name(self) -> float:
+        return self._spellName
+    
     @property
     def timePeriod(self) -> float:
         return self._timePeriod
-
-    @property
-    def maxTargets(self) -> float:
-        return self._maxTargets    
     
     @property
     def oneTargDamage(self) -> float:
         return self._oneTargDamage
+    @property
+    def threeTargDamage(self) -> float:
+        return self._threeTargDamage
+    @property
+    def fiveTargDamage(self) -> float:
+        return self._fiveTargDamage
+    @property
+    def tenTargDamage(self) -> float:
+        return self._tenTargDamage
+
+class SpellProperties():
+
+    def __init__(self, spellName: str, spellNodeTree: str, uniqueNodeCount: int, linearity: float, oneTDps: float, threeTDps: float, fiveTDps: float  , tenTDps: float):
+        self._spellName = spellName
+        self._spellNodeTree = spellNodeTree
+        self._uniqueNodeCount = uniqueNodeCount
+        self._linearity = linearity
+        self._oneTDps = oneTDps
+        self._threeTDps = threeTDps
+        self._fiveTDps = fiveTDps
+        self._tenTDps = tenTDps
+    
+    
+    @property
+    def spellName(self) -> float:
+        return self._spellName
+    @property
+    def spellNodeTree(self) -> float:
+        return self._spellNodeTree
+    @property
+    def uniqueNodeCount(self) -> float:
+        return self._uniqueNodeCount
+    @property
+    def linearity(self) -> float:
+        return self._linearity
+    @property
+    def oneTDps(self) -> float:
+        return self._oneTDps
+    @property
+    def threeTDps(self) -> float:
+        return self._threeTDps
+    @property
+    def fiveTDps(self) -> float:
+        return self._fiveTDps
+    @property
+    def tenTDps(self) -> float:
+        return self._tenTDps
+
+
+    def print(self):
+        print(f"Name: {self._spellName} Rep: {self._spellNodeTree} Node Count: {self._uniqueNodeCount} Linearity: {self._linearity} 1TargetDamage: {self._oneTDps}")
+
+def get_damage_from_energypacket(energy_packet: EnergyPacket):
+    fireDamageChange = max(1+(energy_packet.getSpecificElementalTendency(enum_ElementalType.FIRE)-1)*0.5, 0.1)
+    return energy_packet.getPower()*fireDamageChange*POWER_TO_DAMAGE
