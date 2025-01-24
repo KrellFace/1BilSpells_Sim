@@ -16,6 +16,10 @@ class SpellNode(ABC):
     @property
     def nodeName(self) -> str:
         return self._nodeName
+        
+    @nodeName.setter
+    def nodeName(self, new: str):
+        self._nodeName = new
 
     @property
     def nodeType(self) -> enum_NodeType:
@@ -147,9 +151,9 @@ class EnergyNode(SpellNode):
                 print("Triggered energy node triggered with no power input")
             elif(self._is_autoFire == True):
                 packet_list.extend(child.transmit_energy(EnergyPacket(self._node_power)))
-                print(f"Transmitting : {self._node_power} in {self._nodeName}")
+                #print(f"Transmitting : {self._node_power} in {self._nodeName}")
             else:
-                #print("Transmiting energy in triggered node: " + str(energy_packet.getPower()*self._input_power_mod))
+                #print(f"Transmiting energy in triggered node: {energy_packet.getPower()*self._input_power_mod} ({energy_packet.getPower()}/{self._input_power_mod})")
                 packet_list.extend(child.transmit_energy(EnergyPacket(self._input_power_mod*energy_packet.getPower())))
         return packet_list
 
@@ -201,11 +205,15 @@ class ModNode(SpellNode):
 
         #TO DO - HANDLING FOR DIFFERENT SPLITTING TYPES OF THE POWER BETWEEN OUTPUTS 
         if len(self._child_nodes)>0:
-            out_packet = EnergyPacket((energy_packet.getPower()*self._power_mod)/(len(self._child_nodes)*self._pulses_per_child), energy_packet.getElementalTendency())
+            #print(F"Packet power: {energy_packet.getPower()} p mod: {self._power_mod} len c nodes: {len(self._child_nodes)}, p p c: {self._pulses_per_child}")
+            #print(f"Therefore out packet power: {(energy_packet.getPower()*self._power_mod)/(len(self._child_nodes)*self._pulses_per_child)}")
+            out_packet = EnergyPacket((energy_packet.getPower()*self._power_mod)/(self._max_child_nodes*self._pulses_per_child), energy_packet.getElementalTendency())
             if(self._elemental_type!=None):
                 out_packet.changeTendency(self._elemental_type, self._elemental_mod)
             for child in self._child_nodes:
-                packet_list.extend(child.transmit_energy(out_packet))
+                for i in range(self._pulses_per_child):
+
+                    packet_list.extend(child.transmit_energy(out_packet))
             #print("Dealing " + str(energy) + " damage to  " + str(self._aoe_radius) + " max target")
             return packet_list
         else:
@@ -218,12 +226,13 @@ class ModNode(SpellNode):
 
 class DamageNode(SpellNode):
 
-    def __init__(self, nodeName: str, max_child_nodes: int, aoe_radius: int, power_mod: float, damage_compensating = False, damage_comp_amnt = 0.8):
+    def __init__(self, nodeName: str, max_child_nodes: int, aoe_radius: int, power_mod: float, triggers_on_hits = True, damage_compensating = False, damage_comp_amnt = 0.8):
         super().__init__(nodeName, enum_NodeType.DMG, 1, max_child_nodes) #All Damage nodes have 1 inputs
         self._aoe_radius = aoe_radius
         self._power_mod = power_mod
         self._damage_compensating = damage_compensating
         self._damage_comp_amnt = damage_comp_amnt
+        self._triggers_on_hits = triggers_on_hits
 
 
     def print_self_details(self):
@@ -234,12 +243,12 @@ class DamageNode(SpellNode):
         packet_list = []
 
         power = energy_packet.getPower()
-        print(f"Input power {energy_packet.getPower()} to node {self._nodeName}")
+        #print(f"Input power {energy_packet.getPower()} to node {self._nodeName}")
         if(self._damage_compensating and power>1):
             power = lerp(power, 1, self._damage_comp_amnt)
-            print(f"Lerped power {power} to node {self._nodeName}")
+            #print(f"Lerped power {power} to node {self._nodeName}")
         power *= self._power_mod
-        print(f"Adjusted power {power} to node {self._nodeName}")
+        #print(f"Adjusted power {power} to node {self._nodeName}")
 
         #ONLY CHILDREN IF POWER IS HIGH ENOUGH
         transmitting_to_children = True
@@ -259,14 +268,14 @@ class DamageNode(SpellNode):
             for child in self._child_nodes:
                 
                 packet_list.extend(child.transmit_energy(adjusted_energy_packet))
-        print("Dealing " + str(self_packet.directDamage) + " damage to  " + str(self._aoe_radius) + " max target")
+        #print("Dealing " + str(self_packet.directDamage) + " damage to  " + str(self._aoe_radius) + " max target")
         return packet_list
 
     #@abstractmethod
     def generate_spelleffect_packet(self, energy_packet: EnergyPacket): 
 
-
-        return SpellEffectPacket(get_damage_from_energypacket(energy_packet), get_max_targets_for_aoe_radius(self._aoe_radius))
+        #print(f"AOE Radius: {self._aoe_radius} and max target for it: {get_max_targets_for_aoe_radius(self._aoe_radius)}")
+        return SpellEffectPacket(get_damage_from_energypacket(energy_packet), get_max_targets_for_aoe_radius(self._aoe_radius), self._triggers_on_hits)
     
     
     def copy_node(self):
@@ -291,39 +300,17 @@ class StaticDamageNode(SpellNode):
 
     @abstractmethod
     def transmit_energy(self, energy_packet: EnergyPacket):
-        #print("Transmitting energy in node " + self._nodeName)
-        packet_list = []
-
-        duration = lerp(energy_packet.getPower(), 1, self._duration_comp_amnt) * (energy_packet.getSpecificElementalTendency(enum_ElementalType.EARTH)*self._earth_duration_bonus)
-
-        #total_ticks = math.floor(energy_packet.getPower()*self._ticks_per_second*energy_packet.getSpecificElementalTendency(enum_ElementalType.EARTH))
-        total_ticks = math.floor(duration * self._ticks_per_second)
-        
-        tot_power = energy_packet.getPower()
-        if(self._damage_compensating):
-            tot_power = lerp(tot_power, 1, self._damage_comp_amnt)
-
-
-        power_per_hit = (tot_power*self._power_mod)/total_ticks
-
-        out_packet = EnergyPacket(power_per_hit, energy_packet.getElementalTendency())
-
-        print("Total ticks == " + str(total_ticks) +" energy packet power: " + str(power_per_hit))
-
-        for x in range(total_ticks):
-            packet_list.append(self.generate_info_packet(out_packet))
-            for child in self._child_nodes:
-                packet_list.extend(child.transmit_energy(out_packet))
-        #print("Dealing " + str(energy) + " damage to  " + str(self._aoe_radius) + " max target")
-        return packet_list
+        return 
 
     #@abstractmethod
     def generate_info_packet(self, energy_packet: EnergyPacket): 
         #print("Fireball node creating a spell packet:")
         #print("Creating spell packet with damage: " + str(self._power_mod) + " x " + str(energy))
         #return SpellInfoPacket(self._power_mod*energy_packet.getPower()*energy_packet.getSpecificElementalTendency(enum_ElementalType.FIRE), get_max_targets_for_aoe_radius(self._aoe_radius))
-        return SpellEffectPacket(get_damage_from_energypacket(energy_packet), get_max_targets_for_aoe_radius(self._base_aoe_radius))
+        
+        #print(f"AOE Radius: {self._base_aoe_radius} and max target for it: {get_max_targets_for_aoe_radius(self._base_aoe_radius)}")
+        return SpellEffectPacket(get_damage_from_energypacket(energy_packet), get_max_targets_for_aoe_radius(self._base_aoe_radius), False)
     
-    
+    @abstractmethod
     def copy_node(self):
-        return StaticDamageNode(self._nodeName, self._max_child_nodes, self._base_aoe_radius, self._ticks_per_second, self._power_mod)
+        return StaticDamageNode(self._nodeName, self._max_child_nodes, self._base_aoe_radius, self._ticks_per_second, self._power_mod, self._duration_comp_amnt, self._earth_duration_bonus, self._damage_compensating, self._damage_comp_amnt)

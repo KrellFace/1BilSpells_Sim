@@ -4,10 +4,11 @@ from func.helperFunc import *
 from func.nodeSuperTypes import *
 
 class Spell():
-    def __init__(self, spell_name: str, energy_nodes):
+    def __init__(self, spell_name: str, energy_nodes, count_nodes_incorporated: int = None):
         self._spell_name = spell_name
         if is_list_of_class(energy_nodes, EnergyNode):
             self._energy_nodes = energy_nodes
+        self._count_nodes_incorporated = count_nodes_incorporated
         #self._energy_nodes = energy_nodes
     @property
     def spell_name(self) -> str:
@@ -16,9 +17,13 @@ class Spell():
     @property
     def energy_nodes(self):
         return self._energy_nodes
+
+    @property
+    def count_nodes_incorporated(self):
+        return self._count_nodes_incorporated
     
     #def simulate_time_period(self, period: float, max_targets: int):
-    def simulate_time_period(self, period: float):
+    def simulate_time_period(self, period: float, verbose = False):
         autofire_packet_list = []
 
         
@@ -32,7 +37,7 @@ class Spell():
 
                 #THIS DOES NOT WORK - ITS PINGING EVERY ENERGY NODE AT THE RATE OF THE FASTEST ONE
                 #MAYBE WE CAN JUST DO THEM INDIVIDUALY 
-                #WE ARE DOING THEN INDIVIDUALLY YOU ADORABLE DOLT <3
+                #WE ALREADY ARE DOING THEN INDIVIDUALLY YOU ADORABLE DOLT <3
 
                 for i in range(castcount):
                     autofire_packet_list.extend(node.transmit_energy())
@@ -43,7 +48,9 @@ class Spell():
 
         for packet in autofire_packet_list:
             #all_hit_event_sets.extend([[min(packet.max_targets, max_targets), packet.directDamage]]) 
-            all_hit_event_sets.extend([[packet.max_targets, packet.directDamage]]) 
+            if packet.triggers_on_hits:
+                #print("Triggered event firing")
+                all_hit_event_sets.extend([[packet.max_targets, packet.directDamage/POWER_TO_DAMAGE]]) 
 
 
             #print("Generating hit event set with : " + str(min(packet.max_targets, max_targets)) + " targets and " + str(packet.directDamage) + " damage")
@@ -91,8 +98,8 @@ class Spell():
             tot5targDmg+=(packet.directDamage * min(packet.max_targets, 5))
             tot10targDmg+=(packet.directDamage * min(packet.max_targets, 10))
 
-
-        print("Tot Dir Dmg: " + str(totDirDmg) + ". Tot 3 targ: " + str(tot3targDmg)+ ". Tot 5 targ: " + str(tot5targDmg)+ ". Tot 10 targ: " + str(tot10targDmg))
+        if(verbose):
+            print(f"Tot Dir Dmg: {totDirDmg} Tot 3 targ: {tot3targDmg}. Tot 5 targ: {tot5targDmg} Tot 10 targ: {tot10targDmg}")
 
         return SpellSimData(self._spell_name, period, totDirDmg, tot3targDmg, tot5targDmg, tot10targDmg)
 

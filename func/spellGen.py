@@ -6,37 +6,97 @@ from nodeTypes import *
 
 
 def generate_node_pool():
-    out = []
-    out.append(BasicCastNode("A1"))
-    out.append(BasicCastNode("A2"))
-    out.append(BasicCastNode("A3"))
-    out.append(BasicCastNode("A4"))
-    out.append(AOENode("B"))
-    out.append(Mod50Node("C"))
-    out.append(FireballNode("D"))
-    out.append(ChainingFireballNode("E"))
-    out.append(ExplosionNode("F"))
-    out.append(BigExplosionNode("G"))
-    out.append(NoDamageNode("H"))
-    out.append(TenChildren("I"))
-    out.append(TenParents("J"))
-    out.append(OnHitNode("K"))
-    out.append(StrongFireNode("L"))
-    out.append(StrongWaterNode("M"))
-    return out
+    energyNodes = []
+    energyNodes.append(WandCast("WandCastNorm"))
+    energyNodes.append(OnHitNode("OnHitNode"))
+    energyNodes.append(WandCastSmall("WandCastSmall"))
+    energyNodes.append(OnDashStart("OnDashStart"))
+    energyNodes.append(OnDashEnd("OnDashEnd"))
+    energyNodes.append(OnHit("OnHitAll"))
+    energyNodes.append(OnDeath("OnDeath"))
+    energyNodes.append(OnManaCollect("OnManaCollect"))
+    energyNodes.append(Lightning("Lightning"))
+    energyNodes.append(OnHitHealthy("OnHitHealthy"))
+    energyNodes.append(OnHitDamaged("OnHitDamaged"))
 
-def select_x_nodes_from_pool(pool: list[SpellNode], x: int):
+    modNodes = []
+    modNodes.append(Accumulator("Accumulator"))
+    modNodes.append(Splitter("SplitterBasic"))
+    modNodes.append(Splitter45("Splitter45"))
+    modNodes.append(FourStarSplitter("FourStarSplitter"))
+    modNodes.append(EightStarSplitter("EightStarSplitter"))
+    modNodes.append(Splitter345("Splitter345"))
+    modNodes.append(SplitterParralel("SplitterParralel"))
+    modNodes.append(Repeater2("Repeater2"))
+    modNodes.append(Repeater3("Repeater3"))
+    modNodes.append(Repeater5("Repeater5"))
+    modNodes.append(Alternator2("Alternator2"))
+    modNodes.append(Merger("DoubleMerger"))
+    modNodes.append(TrippleMerger("TrippleMerger"))
+    modNodes.append(Switch("Switch"))
+    modNodes.append(Spliter22("Spliter22"))
+    modNodes.append(RandomSplitter2("RandomSplitter2"))
+    modNodes.append(RandomSplitter3("RandomSplitter3"))
+
+    modNodes.append(StrongFireNode("StrongFireNode"))
+    modNodes.append(StrongWaterNode("StrongWaterNode"))
+    modNodes.append(StrongAirNode("StrongAirNode"))
+    modNodes.append(StrongEarthNode("StrongEarthNode"))
+
+    
+    modNodes.append(Homing("Homing"))
+    modNodes.append(Slow("Slow"))
+    modNodes.append(Rotator10("Rotator10"))
+    modNodes.append(Rotator45("Rotator45"))
+    modNodes.append(TurnLeft("TurnLeft"))
+    modNodes.append(TurnRight("TurnRight"))
+    modNodes.append(RandomTurn("RandomTurn"))
+    modNodes.append(SineMod("SineMod"))
+    modNodes.append(AimAtClosest("AimAtClosest"))
+    modNodes.append(Piercing("PiercingFirst"))
+    modNodes.append(PiercingAll("PiercingAll"))
+
+    damageNodes = []
+    damageNodes.append(ProjectileNode("ProjectileNode"))
+    damageNodes.append(ProjectileWithOutput("ProjectileWithOutput"))
+    damageNodes.append(ExplosionNode("ExplosionNode"))
+    damageNodes.append(SlashNode("SlashNode"))
+    damageNodes.append(LaserNode("LaserNode"))
+    damageNodes.append(LaserWithOutputNode("LaserWithOutputNode"))
+    damageNodes.append(BalisticProjectileNode("BalisticProjectileNode"))
+    damageNodes.append(BubbleNode("BubbleNode"))
+    damageNodes.append(AreaNode("AreaNode"))
+    damageNodes.append(CrystalNode("CrystalNode"))
+
+
+
+    return [energyNodes, modNodes, damageNodes]
+
+def select_x_nodes_from_pool(pool, x: int):
     out = []
+
+    #Energy Nodes
     for i in range(x):
         #out.append(pool[random.randint(0, len(pool)-1)])
-        out.append(pool.pop(random.randint(0, len(pool)-1)))
+        out.append(pool[0][random.randint(0, len(pool[0])-1)].copy_node())
+    #Mod Nodes
+    for i in range(x):
+        #out.append(pool[random.randint(0, len(pool)-1)])
+        out.append(pool[1][random.randint(0, len(pool[1])-1)].copy_node())
+    #Damage Nodes
+    for i in range(x):
+        #out.append(pool[random.randint(0, len(pool)-1)])
+        out.append(pool[2][random.randint(0, len(pool[2])-1)].copy_node())
 
     return out
 
 def generate_random_spell(input_nodes: list[SpellNode], spell_name: str):
 
     start_node = input_nodes.pop(random.randint(0, len(input_nodes)-1))
+    start_node.nodeName = start_node.nodeName+  "-1"
     nodes_incorporated = [start_node]
+
+    #print(f"Gen random spell from {len(input_nodes)} nodes")
 
     failsafe = 0
     while(len(input_nodes)>0 and failsafe < 100):
@@ -79,6 +139,7 @@ def generate_random_spell(input_nodes: list[SpellNode], spell_name: str):
             else:
                 link_nodes(node_to_add_to, to_add)
             nodes_incorporated.append(to_add)
+            to_add.nodeName = to_add.nodeName + "-"+str(len(nodes_incorporated))
         else:
             failsafe+=1
 
@@ -90,9 +151,10 @@ def generate_random_spell(input_nodes: list[SpellNode], spell_name: str):
     #print("Total nodes added: " + str(len(nodes_incorporated)))
 
     energy_nodes = []
+    #print(f"Genereated spell with {len(nodes_incorporated)} nodes incorporated")
     for node in nodes_incorporated:
         if(node.nodeType ==enum_NodeType.ENERGY):
             energy_nodes.append(node)
     
-    return Spell(spell_name, energy_nodes),len(nodes_incorporated)
+    return Spell(spell_name, energy_nodes, len(nodes_incorporated))
             

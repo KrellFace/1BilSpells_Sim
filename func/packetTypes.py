@@ -41,23 +41,26 @@ class EnergyPacket():
     def getElementalTendency(self):
         return [self._fireTendency, self._waterTendency, self._airTendency, self._earthTendency]
     
-    def getSpecificElementalTendency(self, type: enum_ElementalType):
+    def getSpecificElementalTendency(self, type: enum_ElementalType, mod =1):
+        val = 0
         if(type == enum_ElementalType.FIRE):
-            return self._fireTendency
+            val = self._fireTendency
         elif(type == enum_ElementalType.WATER):
-            return self._waterTendency
+            val = self._waterTendency
         elif(type == enum_ElementalType.AIR):
-            return self._airTendency
+            val = self._airTendency
         else:
-            return self._earthTendency
+            val = self._earthTendency
+        return max(1 + (val-1)*mod, 0.1)
     
     def printDetails(self):
         print("Energy pulse with power: " + str(self._power) + " and elemental tendency: " + str(self._fireTendency) + ", "  + str(self._waterTendency)  + ", "  + str(self._airTendency)   + ", "  + str(self._earthTendency))
 
 class SpellEffectPacket():
-    def __init__(self, directDamage: float, max_targets: int):
+    def __init__(self, directDamage: float, max_targets: int, triggers_on_hits: bool):
         self._directDamage = directDamage
         self._max_targets = max_targets
+        self._triggers_on_hits = triggers_on_hits
         #print("Spell packet created: " + str(self._directDamage) + "," + str(self._multiTargDamage))
 
     @property
@@ -67,6 +70,10 @@ class SpellEffectPacket():
     @property
     def max_targets(self) -> float:
         return self._max_targets
+    
+    @property
+    def triggers_on_hits(self) -> float:
+        return self._triggers_on_hits
 
 class SpellSimData():
     def __init__(self, spell_name, timePeriod, oneTargDamage, threeTargDamage, fiveTargDamage, tenTargDamage ):
@@ -142,4 +149,4 @@ class SpellProperties():
 
 def get_damage_from_energypacket(energy_packet: EnergyPacket):
     fireDamageChange = max(1+(energy_packet.getSpecificElementalTendency(enum_ElementalType.FIRE)-1)*0.5, 0.1)
-    return energy_packet.getPower()*fireDamageChange*POWER_TO_DAMAGE
+    return round(energy_packet.getPower()*fireDamageChange*POWER_TO_DAMAGE)

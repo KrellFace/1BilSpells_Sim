@@ -12,12 +12,12 @@ def gen_best_spell(pool: list[SpellNode], spellName: str, attempts: int, heurist
     bestSpell = None
     bestScore = None
     for i in range(attempts):
-        spell, nodeCount = generate_random_spell(copy_node_list(pool), spellName)
+        spell = generate_random_spell(copy_node_list(pool), spellName)
         if(heuristic is enum_SpellQualityHeuristic.NODES_INCORPED):
-            if bestScore is None or nodeCount>bestScore:
+            if bestScore is None or spell.count_nodes_incorporated>bestScore:
                 bestSpell= spell
-                bestScore = nodeCount
-        
+                bestScore = spell.count_nodes_incorporated
+
         elif(heuristic is enum_SpellQualityHeuristic.DPS):
 
             #TO DO - DECIDE ON SIM PERIOD, MAX TARGETS AND WHERE TO STORE
@@ -47,11 +47,17 @@ def full_spell_generation_run(out_path, spells_to_gen: int, qual_heuristic: enum
 
     for i in range(spells_to_gen):
 
-        selected_pool = select_x_nodes_from_pool(copy_node_list(overall_pool), pool_size_per_spell)
+        #selected_pool = select_x_nodes_from_pool(copy_node_list(overall_pool), pool_size_per_spell)
+        selected_pool = select_x_nodes_from_pool(overall_pool, pool_size_per_spell)
+
+        #print(f"Selected pool length: {len(selected_pool)}")
 
         sp = gen_best_spell(selected_pool, f"Spell {i}", attempts_per_set, qual_heuristic)
 
         spell_properties.append(genSpellProperties(sp, 5))
+
+        if i%100 is 0:
+            print(f"{i} Spells generated")
     
     gen_csv_from_spellsdata(spell_properties, out_path)
     

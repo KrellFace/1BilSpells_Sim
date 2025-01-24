@@ -8,12 +8,21 @@ def genSpellProperties(spell: Spell, simTime: int):
     spellRep = spell.get_spell_parentheses_not()
 
     energy_nodes = spell.energy_nodes
-    nodes_incorporated = set()
-    for node in energy_nodes:
-        nodes_incorporated.update(recursively_get_child_nodes(node))
+    #nodes_incorporated = set()
+    #for node in energy_nodes:
+     #   nodes_incorporated.update(recursively_get_child_nodes(node))
 
-    count_nodes = len(nodes_incorporated)
-    branching_factor = count_nodes / spellRep.count("(")
+    maxChain = 0
+    for node in energy_nodes:
+        val = recursively_get_longest_chainlength(node, 0)
+        if val > maxChain:
+            maxChain = val
+
+    #count_nodes = len(nodes_incorporated)
+    count_nodes = spell.count_nodes_incorporated
+    #branching_factor = count_nodes -spellRep.count(")(") / count_nodes
+    #branching_factor = spellRep.count(")(")
+    branching_factor = round(maxChain/count_nodes,2)
 
 
     simData= spell.simulate_time_period(simTime)
@@ -32,3 +41,14 @@ def recursively_get_child_nodes(node: SpellNode):
 
 
     return out
+
+def recursively_get_longest_chainlength(node: SpellNode, parentChainlength: int):
+    chainLength=parentChainlength+1
+    maxChildLength = chainLength
+    for child in node.child_nodes:
+        val = recursively_get_longest_chainlength(child, chainLength)
+        if val >maxChildLength:
+            maxChildLength = val
+    return maxChildLength
+
+

@@ -104,11 +104,6 @@ class accumulatorThree(ModNode):
     def __init__(self, nodeName):
         super().__init__(nodeName, 1, 1, 0.5)
 
-
-
-
-
-
 #ELEMENTAL NODES
 
 class WeakFireNode(ModNode):
