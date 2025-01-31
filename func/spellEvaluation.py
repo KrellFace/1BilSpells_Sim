@@ -8,7 +8,6 @@ def genSpellProperties(spell: Spell, simTime: int):
     spellRep = spell.get_spell_parentheses_not()
 
     energy_nodes = spell.energy_nodes
-    #nodes_incorporated = set()
     #for node in energy_nodes:
      #   nodes_incorporated.update(recursively_get_child_nodes(node))
 
@@ -18,10 +17,7 @@ def genSpellProperties(spell: Spell, simTime: int):
         if val > maxChain:
             maxChain = val
 
-    #count_nodes = len(nodes_incorporated)
     count_nodes = spell.count_nodes_incorporated
-    #branching_factor = count_nodes -spellRep.count(")(") / count_nodes
-    #branching_factor = spellRep.count(")(")
     branching_factor = round(maxChain/count_nodes,2)
 
 

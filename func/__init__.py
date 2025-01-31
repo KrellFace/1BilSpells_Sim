@@ -8,3 +8,4 @@ from .spellGen import *
 from .genRunControl import *
 from .spellEvaluation import *
 from .outputGen import *
+from .figureGen import *

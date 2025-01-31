@@ -77,22 +77,20 @@ def select_x_nodes_from_pool(pool, x: int):
 
     #Energy Nodes
     for i in range(x):
-        #out.append(pool[random.randint(0, len(pool)-1)])
         out.append(pool[0][random.randint(0, len(pool[0])-1)].copy_node())
     #Mod Nodes
     for i in range(x):
-        #out.append(pool[random.randint(0, len(pool)-1)])
         out.append(pool[1][random.randint(0, len(pool[1])-1)].copy_node())
     #Damage Nodes
     for i in range(x):
-        #out.append(pool[random.randint(0, len(pool)-1)])
         out.append(pool[2][random.randint(0, len(pool[2])-1)].copy_node())
 
     return out
 
 def generate_random_spell(input_nodes: list[SpellNode], spell_name: str):
 
-    start_node = input_nodes.pop(random.randint(0, len(input_nodes)-1))
+    #Choosing from the middle third of the pool to guaruntee the first node is a mod node, as they all have parent and child slots free, reducing the risk of a deadend
+    start_node = input_nodes.pop(random.randint(math.floor(len(input_nodes)/3), math.floor(len(input_nodes)*(2/3))))
     start_node.nodeName = start_node.nodeName+  "-1"
     nodes_incorporated = [start_node]
 
@@ -111,7 +109,6 @@ def generate_random_spell(input_nodes: list[SpellNode], spell_name: str):
 
         #If node to add could be attached anywhere, coin flip, else look only where relevant
         #Also note, if we only have free parent slots we must be added as a child and visa versa
-        #to_add = None
         adding_as_parent = None
         if to_add_has_free_parent_slots and to_add_has_free_child_slots:
             if (random.random()>0.5):
@@ -133,7 +130,6 @@ def generate_random_spell(input_nodes: list[SpellNode], spell_name: str):
             #print("Found linkable nodes")
             #print(f"Toadd {to_add.nodeName}: Parent nodes available: {len(to_add.parent_nodes)}/{to_add.max_parent_nodes}. ChildNodes available:{len(to_add.child_nodes)}/{to_add.max_child_nodes}")
             
-            #print(f"node_to_add_to {node_to_add_to.nodeName}: Parent nodes available: {len(node_to_add_to.parent_nodes)}/{node_to_add_to.max_parent_nodes}. ChildNodes available:{len(node_to_add_to.child_nodes)}/{node_to_add_to.max_child_nodes}")
             if adding_as_parent:
                 link_nodes(to_add, node_to_add_to)
             else:
@@ -143,7 +139,6 @@ def generate_random_spell(input_nodes: list[SpellNode], spell_name: str):
         else:
             failsafe+=1
 
-            #TO FIX - READDING NODES TO THE SELECTABLE POOL IF THEY WERE NOT LINKABLE
 
             input_nodes.append(to_add)
             #print(f"Readding failed node {to_add.nodeName} to list")

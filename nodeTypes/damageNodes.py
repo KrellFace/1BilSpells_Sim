@@ -66,10 +66,6 @@ class AreaNode(StaticDamageNode):
         if(self._damage_compensating):
             tot_power = lerp(tot_power, 1, self._damage_comp_amnt)
 
-
-
-        #power_per_hit = (tot_power*self._power_mod)/total_ticks
-
         #Note: Unlike crystals - Areas do not divide input power by number of hits they are doing to do
 
         power_per_hit = tot_power*self._power_mod
@@ -109,7 +105,6 @@ class CrystalNode(StaticDamageNode):
 
         duration = lerp(energy_packet.getPower(), 1, self._duration_comp_amnt) * (energy_packet.getSpecificElementalTendency(enum_ElementalType.EARTH)*self._earth_duration_bonus)
 
-        #total_ticks = math.floor(energy_packet.getPower()*self._ticks_per_second*energy_packet.getSpecificElementalTendency(enum_ElementalType.EARTH))
         total_ticks = math.floor(duration * self._ticks_per_second)
         
         tot_power = energy_packet.getPower()
@@ -136,7 +131,6 @@ class CrystalNode(StaticDamageNode):
 
             #Dont add a self packet - because crystals dont produce damage
 
-            #packet_list.append(self.generate_info_packet(out_packet))
             for child in self._child_nodes:
                 packet_list.extend(child.transmit_energy(out_packet))
         #print("Dealing " + str(energy) + " damage to  " + str(self._aoe_radius) + " max target")

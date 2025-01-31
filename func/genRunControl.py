@@ -20,8 +20,6 @@ def gen_best_spell(pool: list[SpellNode], spellName: str, attempts: int, heurist
 
         elif(heuristic is enum_SpellQualityHeuristic.DPS):
 
-            #TO DO - DECIDE ON SIM PERIOD, MAX TARGETS AND WHERE TO STORE
-
             simData = spell.simulate_time_period(5)
             if bestScore is None or simData.oneTargDamage > bestScore:
                 bestSpell= spell
@@ -37,28 +35,30 @@ def clean_pool(pool: list[SpellNode]):
         node.clear_family()
 
 
-def full_spell_generation_run(out_path, spells_to_gen: int, qual_heuristic: enum_SpellQualityHeuristic, attempts_per_set: int, pool_size_per_spell: int):
+def full_spell_generation_run(out_path, spells_to_gen: int, qual_heuristic: enum_SpellQualityHeuristic, attempts_per_set: int, pool_size_per_spell: int, sim_length: int):
 
     overall_pool = generate_node_pool()
 
-    #TO DO - OUTPUT OVERALL POOL AS CSV
-
+    gen_csv_from_nodelist(overall_pool,out_path)
     spell_properties = []
 
     for i in range(spells_to_gen):
 
-        #selected_pool = select_x_nodes_from_pool(copy_node_list(overall_pool), pool_size_per_spell)
         selected_pool = select_x_nodes_from_pool(overall_pool, pool_size_per_spell)
-
         #print(f"Selected pool length: {len(selected_pool)}")
 
         sp = gen_best_spell(selected_pool, f"Spell {i}", attempts_per_set, qual_heuristic)
 
-        spell_properties.append(genSpellProperties(sp, 5))
+        spell_properties.append(genSpellProperties(sp, sim_length))
 
-        if i%100 is 0:
+        if i%100 == 0:
             print(f"{i} Spells generated")
     
     gen_csv_from_spellsdata(spell_properties, out_path)
+
+    #Make csv of only spells with the maximum possible nodes incorporated
+    gen_csv_from_spellsdata(spell_properties, out_path,True, pool_size_per_spell*3)
+
+    return spell_properties
     
 

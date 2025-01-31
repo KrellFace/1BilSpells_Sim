@@ -9,7 +9,6 @@ class Spell():
         if is_list_of_class(energy_nodes, EnergyNode):
             self._energy_nodes = energy_nodes
         self._count_nodes_incorporated = count_nodes_incorporated
-        #self._energy_nodes = energy_nodes
     @property
     def spell_name(self) -> str:
         return self._spell_name
@@ -33,11 +32,6 @@ class Spell():
             if (node.is_autofire()==True):
                 #node.print_self_details()
                 castcount = math.floor(period * node.ticks_per_second())
-                #node.transmit_energy()
-
-                #THIS DOES NOT WORK - ITS PINGING EVERY ENERGY NODE AT THE RATE OF THE FASTEST ONE
-                #MAYBE WE CAN JUST DO THEM INDIVIDUALY 
-                #WE ALREADY ARE DOING THEN INDIVIDUALLY YOU ADORABLE DOLT <3
 
                 for i in range(castcount):
                     autofire_packet_list.extend(node.transmit_energy())
@@ -47,10 +41,9 @@ class Spell():
         triggeredfire_packet_list = []
 
         for packet in autofire_packet_list:
-            #all_hit_event_sets.extend([[min(packet.max_targets, max_targets), packet.directDamage]]) 
-            if packet.triggers_on_hits:
+            #if packet.triggers_on_hits:
                 #print("Triggered event firing")
-                all_hit_event_sets.extend([[packet.max_targets, packet.directDamage/POWER_TO_DAMAGE]]) 
+            all_hit_event_sets.extend([[packet.max_targets, packet.directDamage/POWER_TO_DAMAGE, packet.triggers_on_hits]]) 
 
 
             #print("Generating hit event set with : " + str(min(packet.max_targets, max_targets)) + " targets and " + str(packet.directDamage) + " damage")
@@ -61,13 +54,12 @@ class Spell():
             if(not node.is_autofire()):
                 #node.print_self_details()
                 for hit_event_set in all_hit_event_sets:
-                    #print(hit_event_set)
-                    if(random.uniform(0, 1)<node.hit_to_trigger_rate()):
-                        #castcount = math.floor(hit_event_set[0] * node.hit_to_trigger_rate())
+                    #print(f"Hit event set: {hit_event_set} nodeName: {node.nodeName}, {node.triggers_with_all_hits}")
 
+                    #Handling for only triggering if either its a node that triggers always (on deaths) or if its an event that triggers on hit events (non aoe nodes mainly)
+
+                    if(random.uniform(0, 1)<node.hit_to_trigger_rate() and (node.triggers_with_all_hits or hit_event_set[2])):
                         for i in range(hit_event_set[0]):
-
-                            #TO FIX/INVESTIGATE - ELEMENTAL EFFECTS NOT BEING PASSED INTO ONHIT TRIGGERS ETC 
 
                             triggeredfire_packet_list.extend(node.transmit_energy(EnergyPacket(hit_event_set[1])))
 
@@ -79,11 +71,6 @@ class Spell():
         #print("Packet list: ")
         #print(packet_list)
 
-        #ITS IN THIS LOOP THAT WE SHOULD CALCULATE TRIGGERED EVENTS, BASED ON TARGETS HIT MODULATED BY A HEURISTIC
-        #I.E VANILLA ON HIT EVENTS - TRIGGER FOR ALL HITS - HIT HEALTHY, ONLY 50% OF HITS ETC ETC
-        #ADD ALL EVENTS TO A SEPERATE DICT OR SIMILAR STRUCTURE, THEN WE TRIGGER ALL EVENT BASED NODES
-        #THEN REPEAT THAT PROCESS UNTIL NO NEW EVENTS 
-
         for packet in autofire_packet_list:
             totDirDmg+=packet.directDamage
             tot3targDmg+=(packet.directDamage * min(packet.max_targets, 3))
@@ -91,7 +78,6 @@ class Spell():
             tot10targDmg+=(packet.directDamage * min(packet.max_targets, 10))
 
         
-
         for packet in triggeredfire_packet_list:
             totDirDmg+=packet.directDamage
             tot3targDmg+=(packet.directDamage * min(packet.max_targets, 3))

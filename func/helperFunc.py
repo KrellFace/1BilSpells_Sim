@@ -12,10 +12,6 @@ def get_max_targets_for_aoe_radius(radius: float):
     area = math.pi * radius**2
     return max(math.floor(area*AREA_TO_TARGET_FACTOR),1)
 
-#def get_damage_from_energypacket(energy_packet: EnergyPacket, power_mod: float):
-#    return power_mod*energy_packet.getPower()*energy_packet.getSpecificElementalTendency(enum_ElementalType.FIRE)
-
-
 def get_node_with_free_slot(nodes_to_check, looking_for_parent_slot):
     out = None
     #print("Checking set of nodes, first node in list: " + nodes_to_check[0].nodeName + " and LFP: " + str(looking_for_parent_slot))

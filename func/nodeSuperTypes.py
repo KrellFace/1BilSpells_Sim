@@ -24,22 +24,12 @@ class SpellNode(ABC):
     @property
     def nodeType(self) -> enum_NodeType:
         return self._nodeType
-
-    #@nodeType.setter
-    #@abstractmethod
-    #def nodeType(self, value: enum_NodeType):
-    #    self._nodeType = value
-
     
     @abstractmethod
     def transmit_energy(self, energy_packet: EnergyPacket):
         #print("Transmitting energy in node " + self._nodeName)
         for child in self._child_nodes:
             child.transmit_energy(energy_packet)
-
-    #@abstractmethod
-    #def receive_energy(self, energy: float):
-    #    print("Receiving energy in node " + self._nodeName)
 
     @property
     def max_parent_nodes(self):
@@ -52,7 +42,6 @@ class SpellNode(ABC):
     # Setter
     @parent_nodes.setter
     def parent_nodes(self, value):
-        #print("Setting name")
         if not is_list_of_class(value, SpellNode):
             raise ValueError("Parent nodes must be list of spell nodes")
         if not len(value) <= self._max_parent_nodes:
@@ -71,7 +60,6 @@ class SpellNode(ABC):
     # Setter
     @child_nodes.setter
     def child_nodes(self, value):
-        #print("Setting name")
         if not is_list_of_class(value, SpellNode):
             raise ValueError("Child nodes must be list of spell nodes")
         if not len(value) <= self._max_child_nodes:
@@ -130,17 +118,14 @@ class SpellNode(ABC):
 
 class EnergyNode(SpellNode):
     
-    #def __init__(self, nodeType: NodeType):
-    #    self._nodeType = nodeType
-    def __init__(self, nodeName: str, node_power: float, ticks_per_second: float, is_autofire: bool, input_power_mod: float = None, hit_to_trigger_rate = None):
+    def __init__(self, nodeName: str, node_power: float, ticks_per_second: float, is_autofire: bool, input_power_mod: float = None, hit_to_trigger_rate = None, triggers_with_all_hits: bool = False):
         super().__init__(nodeName, enum_NodeType.ENERGY, 0, 1) #All Energy nodes have 0 inputs and 1 output
         self._node_power = node_power
         self._ticks_per_second = ticks_per_second
         self._is_autoFire = is_autofire
         self._input_power_mod = input_power_mod
         self._hit_to_trigger_rate = hit_to_trigger_rate
-        #self.setup_EnergyNode()
-    
+        self._triggers_with_all_hits = triggers_with_all_hits
 
     #Overloading transmit energy to always use the nodes energy value
     def transmit_energy(self, energy_packet = None):
@@ -172,13 +157,12 @@ class EnergyNode(SpellNode):
     def hit_to_trigger_rate(self) -> float:
         return self._hit_to_trigger_rate
     
+    @property
+    def triggers_with_all_hits(self) -> bool:
+        return self._triggers_with_all_hits
     
-    #@abstractmethod
-    #def setup_EnergyNode(self):
-    #    pass
 
     def copy_node(self):
-        #return EnergyNode(self._nodeName, self._nodeType, self._max_parent_nodes, self._max_child_nodes, self._child_nodes,self._parent_nodes)
         return EnergyNode(self._nodeName, self._node_power, self._ticks_per_second, self._is_autoFire, self._input_power_mod, self._hit_to_trigger_rate)
 
     def print_self_details(self):
@@ -226,9 +210,9 @@ class ModNode(SpellNode):
 
 class DamageNode(SpellNode):
 
-    def __init__(self, nodeName: str, max_child_nodes: int, aoe_radius: int, power_mod: float, triggers_on_hits = True, damage_compensating = False, damage_comp_amnt = 0.8):
+    def __init__(self, nodeName: str, max_child_nodes: int, base_aoe_radius: int, power_mod: float, triggers_on_hits = True, damage_compensating = False, damage_comp_amnt = 0.8):
         super().__init__(nodeName, enum_NodeType.DMG, 1, max_child_nodes) #All Damage nodes have 1 inputs
-        self._aoe_radius = aoe_radius
+        self._base_aoe_radius = base_aoe_radius
         self._power_mod = power_mod
         self._damage_compensating = damage_compensating
         self._damage_comp_amnt = damage_comp_amnt
@@ -236,7 +220,7 @@ class DamageNode(SpellNode):
 
 
     def print_self_details(self):
-        print(self._nodeName + " is a damage node with aoe size " + str(self._aoe_radius))
+        print(self._nodeName + " is a damage node with aoe size " + str(self._base_aoe_radius))
 
     def transmit_energy(self, energy_packet: EnergyPacket):
         #print("Transmitting energy in node " + self._nodeName)
@@ -262,9 +246,6 @@ class DamageNode(SpellNode):
         packet_list.append(self_packet)
 
         if(transmitting_to_children):
-            #packet_list.append(self_packet)
-        
-            #outPacket = EnergyPacket(energy_packet.getPower()*self._power_mod, energy_packet.getElementalTendency())
             for child in self._child_nodes:
                 
                 packet_list.extend(child.transmit_energy(adjusted_energy_packet))
@@ -275,12 +256,12 @@ class DamageNode(SpellNode):
     def generate_spelleffect_packet(self, energy_packet: EnergyPacket): 
 
         #print(f"AOE Radius: {self._aoe_radius} and max target for it: {get_max_targets_for_aoe_radius(self._aoe_radius)}")
-        return SpellEffectPacket(get_damage_from_energypacket(energy_packet), get_max_targets_for_aoe_radius(self._aoe_radius), self._triggers_on_hits)
+        return SpellEffectPacket(get_damage_from_energypacket(energy_packet), get_max_targets_for_aoe_radius(self._base_aoe_radius*energy_packet.getSpecificElementalTendency(enum_ElementalType.WATER,0.5)), self._triggers_on_hits)
     
     
     def copy_node(self):
         #return DamageNode(self._nodeName, self._nodeType, self._max_parent_nodes, self._max_child_nodes, self._child_nodes,self._parent_nodes)
-        return DamageNode(self._nodeName, self._max_child_nodes, self._aoe_radius, self._power_mod, self._damage_compensating, self._damage_comp_amnt)
+        return DamageNode(self._nodeName, self._max_child_nodes, self._base_aoe_radius, self._power_mod, self._damage_compensating, self._damage_comp_amnt)
 
 class StaticDamageNode(SpellNode):
 
@@ -304,10 +285,6 @@ class StaticDamageNode(SpellNode):
 
     #@abstractmethod
     def generate_info_packet(self, energy_packet: EnergyPacket): 
-        #print("Fireball node creating a spell packet:")
-        #print("Creating spell packet with damage: " + str(self._power_mod) + " x " + str(energy))
-        #return SpellInfoPacket(self._power_mod*energy_packet.getPower()*energy_packet.getSpecificElementalTendency(enum_ElementalType.FIRE), get_max_targets_for_aoe_radius(self._aoe_radius))
-        
         #print(f"AOE Radius: {self._base_aoe_radius} and max target for it: {get_max_targets_for_aoe_radius(self._base_aoe_radius)}")
         return SpellEffectPacket(get_damage_from_energypacket(energy_packet), get_max_targets_for_aoe_radius(self._base_aoe_radius), False)
     
